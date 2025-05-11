@@ -1,0 +1,28 @@
+{% extends 'layout.html' %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<h1>Vítejte v Dashboardu</h1>
+<p>Naměřené hodnoty:</p>
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Teplota</th>
+      <th>Datum a čas</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in data %}
+    <tr>
+      <td>{{ row.id }}</td>
+      <td>{{ row.temperature }}</td>
+      <td>{{ row.created_at.strftime('%d.%m.%Y %H:%M:%S') }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+<div class="mb-3">
+  <a href="{{ url_for('dashboard', sort='asc') }}" class="btn btn-outline-secondary btn-sm {% if sort == 'asc' %}active{% endif %}">Od nejstarší</a>
+  <a href="{{ url_for('dashboard', sort='desc') }}" class="btn btn-outline-secondary btn-sm {% if sort == 'desc' %}active{% endif %}">Od nejnovější</a>
+</div>
+{% endblock %}
