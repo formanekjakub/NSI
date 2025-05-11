@@ -1,0 +1,7 @@
+mosquitto - příkazy
+
+brew services list (akutalni stav/status)
+brew services start mosquitto (spusti na pozadi)
+brew services stop mosquitto
+mosquitto -v  (spustí v terminalu)
+
