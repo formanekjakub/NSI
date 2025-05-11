@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <title>Teplotní Dashboard</title>
+    <meta http-equiv="refresh" content="5">
+</head>
+<body>
+    <h1>Teplotní měření</h1>
+    <form method="post" action="/clear" onsubmit="return confirm('Opravdu chceš smazat všechna měření?');">
+        <button type="submit">🗑️ Vymazat všechna měření</button>
+    </form>
+    <table border="1">
+        <tr>
+            <th>ID</th>
+            <th>Teplota [°C]</th>
+            <th>Čas měření</th>
+            <th>Čas odeslání</th>
+            <th>Čas přijetí</th>
+        </tr>
+        {% for row in measurements %}
+        <tr>
+            <td>{{ row[0] }}</td>
+            <td>{{ row[1] }}</td>
+            <td>{{ row[2] }}</td>
+            <td>{{ row[3] }}</td>
+            <td>{{ row[4] }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
