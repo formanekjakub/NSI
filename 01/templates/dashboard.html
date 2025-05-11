@@ -1,0 +1,95 @@
+{% extends 'layout.html' %}
+{% block content %}
+<h2>Dashboard</h2>
+
+<div>
+  <h4>Poslední naměřená hodnota:</h4>
+  {% if posledni_hodnota %}
+    <p>Teplota: {{ posledni_hodnota.temperature }}°C, Čas: {{ posledni_hodnota.timestamp }}</p>
+  {% else %}
+    <p><strong>Žádná data nejsou dostupná.</strong></p>
+  {% endif %}
+</div>
+
+<h4>Posledních {{ data|length }} naměřených hodnot:</h4>
+{% if data %}
+  <table class="table table-bordered">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Teplota (°C)</th>
+        <th>Čas zápisu</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for z in data %}
+      <tr>
+        <td>{{ z.id }}</td>
+        <td>{{ z.temperature }}</td>
+        <td>{{ z.timestamp }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p><strong>Žádné hodnoty nejsou k dispozici.</strong></p>
+{% endif %}
+
+{% if session.get('username') %}
+<!-- Formulář pro zadání počtu záznamů -->
+<form method="POST" class="mb-3">
+  <div class="mb-3">
+    <label for="count" class="form-label">Počet záznamů k zobrazení:</label>
+    <!-- Předvyplníme aktuálně nastavenou hodnotu -->
+    <input type="text" class="form-control" name="count" id="count" value="{{ count }}">
+  </div>
+  <button type="submit" class="btn btn-primary">Zobrazit</button>
+</form>
+
+<form action="{{ url_for('delete_oldest') }}" method="post" onsubmit="return confirm('Opravdu chcete smazat nejstarší hodnotu?');">
+  <button type="submit" class="btn btn-danger mt-3">Smazat nejstarší hodnotu</button>
+</form>
+{% else %}
+<p>Přihlaste se, abyste mohli mazat hodnoty.</p>
+{% endif %}
+
+<!-- Graf -->
+<h4 class="mt-4">Graf naměřených hodnot v čase</h4>
+<canvas id="temperatureChart" width="400" height="200"></canvas>
+
+<!-- Načtení Chart.js z CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // Získáme kontext canvasu
+  const ctx = document.getElementById('temperatureChart').getContext('2d');
+
+  // Vytvoříme nový graf
+  const myChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      // Jinja2 vygeneruje pole s časovými značkami
+      labels: {{ data | map(attribute='timestamp') | list | safe }},
+      datasets: [{
+        label: 'Teplota (°C)',
+        // Jinja2 vygeneruje pole s teplotami
+        data: {{ data | map(attribute='temperature') | list | safe }},
+        borderColor: 'rgba(54, 162, 235, 1)',
+        borderWidth: 2,
+        fill: false
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: {
+          title: { display: true, text: 'Čas zápisu' }
+        },
+        y: {
+          title: { display: true, text: 'Teplota (°C)' },
+          beginAtZero: true
+        }
+      }
+    }
+  });
+</script>
+{% endblock %}

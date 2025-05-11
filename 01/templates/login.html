@@ -1,0 +1,36 @@
+{% extends 'layout.html' %}
+
+{% block title %}Přihlášení{% endblock %}
+
+{% block content %}
+<div class="container d-flex vh-100">
+  <div class="row m-auto align-self-center">
+    <div class="col-12 col-md-6 col-lg-12 p-4 shadow bg-white rounded">
+      <h1 class="text-center mb-4">Přihlášení</h1>
+      <!-- Chybové hlášení -->
+      {% if error %}
+      <div class="alert alert-danger" role="alert">
+        {{ error }}
+      </div>
+      {% endif %}
+
+      <form method="POST">
+        <div class="mb-3">
+          <label for="username" class="form-label">Uživatelské jméno</label>
+          <input type="text" class="form-control" id="username" name="username" required>
+        </div>
+
+        <div class="mb-3">
+          <label for="password" class="form-label">Heslo</label>
+          <input type="password" class="form-control" id="password" name="password" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">Přihlásit se</button>
+      </form>
+
+      <!-- Odkaz na Registraci -->
+      <a href="{{ url_for('register') }}" class="btn btn-secondary w-100 mt-3">Přejít k registraci</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
