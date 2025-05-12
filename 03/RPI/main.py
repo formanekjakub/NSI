@@ -9,7 +9,7 @@ from machine import ADC
 WIFI_SSID = "Jakub-iphone"
 WIFI_PASSWORD = "12345687"
 
-MQTT_BROKER = "172.20.10.3"  # IP adresa serveru s MQTT brokerem
+MQTT_BROKER = "127.0.0.1"  # IP adresa serveru s MQTT brokerem
 MQTT_PORT = 1883
 MQTT_TOPIC = "temperature/data"
 MQTT_CLIENT_ID = "pico_client"

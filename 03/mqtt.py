@@ -2,14 +2,14 @@ import json
 import paho.mqtt.client as mqtt
 from database import insert_measurement
 
-BROKER = "172.20.10.3"         # IP adresa serveru s MQTT brokerem
+BROKER = "172.20.10.2"         # IP adresa serveru s MQTT brokerem
 TOPIC = "temperature/data"
 
 def on_connect(client, userdata, flags, rc):
     print("---------------------------------")
     print("Připojeno k brokeru s kódem:", rc)
     print("---------------------------------")
-    client.subscribe(TOPIC, qos=1) # chci zpravu z topicu s povrzenim o doruceni
+    client.subscribe(TOPIC, qos=1) # povrzeni o doruceni
 
 def on_message(client, userdata, msg):
     try:
