@@ -5,117 +5,107 @@ import json
 from umqtt.simple import MQTTClient
 from machine import ADC, Pin
 
-# ==== Nastavení ====
-WIFI_SSID = "Jakub-iphone"
-WIFI_PASSWORD = "12345687"
+# Configuration constants
+SSID = 'Jakub-iphone'
+WIFI_PASS = '12345687'
+BROKER = '127.0.0.1'
+PORT = 1883
+CLIENT_ID = 'pico_client'
+DATA_TOPIC = 'temperature/data'
+CMD_TOPIC = 'control/pico'
 
-MQTT_BROKER = "172.20.10.3"  # IP adresa serveru s MQTT brokerem
-MQTT_PORT = 1883
-MQTT_CLIENT_ID = "pico_client"
-TOPIC_DATA = "temperature/data"
-TOPIC_COMMAND = "control/pico"
+send_interval = 10
+measuring = True
+led_pin = Pin('LED', Pin.OUT)
 
-SEND_INTERVAL = 10  # výchozí perioda měření [s]
-measure_enabled = True
-led = Pin("LED", Pin.OUT)
+# Wi-Fi setup
 
-# ==== Wi-Fi připojení ====
-def connect_wifi():
+def init_wifi():
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
-    wlan.connect(WIFI_SSID, WIFI_PASSWORD)
+    wlan.connect(SSID, WIFI_PASS)
     while not wlan.isconnected():
-        print("Připojuji k WiFi...")
+        print('Connecting WiFi...')
         time.sleep(1)
-    print("Připojeno:", wlan.ifconfig())
+    print('WiFi:', wlan.ifconfig())
 
-# ==== Čas ====
-def sync_time():
+# Time sync
+
+def synchronize_time():
     try:
         ntptime.settime()
-        print("Čas synchronizován")
+        print('Time synced')
     except:
-        print("Chyba při synchronizaci času")
+        print('Sync error')
 
-def get_local_timestamp(offset_hours=2):
-    t = time.time() + offset_hours * 3600
-    ts = time.localtime(t)
+# Timestamp formatting
+
+def format_timestamp(offset_h=2):
+    now = time.time() + offset_h*3600
+    tm = time.localtime(now)
     ms = time.ticks_ms() % 1000
-    return "{:04d}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}.{:03d}".format(
-        ts[0], ts[1], ts[2], ts[3], ts[4], ts[5], ms
-    )
+    return f"{tm[0]:04d}-{tm[1]:02d}-{tm[2]:02d} {tm[3]:02d}:{tm[4]:02d}:{tm[5]:02d}.{ms:03d}"
 
-# ==== Čtení teploty ====
-def read_temperature():
+# Measure temperature
+
+def measure_temp():
     sensor = ADC(4)
-    reading = sensor.read_u16() * 3.3 / 65535
-    temperature = 27 - (reading - 0.706) / 0.001721
-    return round(temperature, 2)
+    volt = sensor.read_u16() * 3.3 / 65535
+    return round(27 - (volt - 0.706)/0.001721, 2)
 
-# ==== Zpracování příkazu ====
-def handle_command(command):
-    global measure_enabled, SEND_INTERVAL
-    print("Přijatý příkaz:", command)
+# Command processing
 
-    if command == "LED ON":
-        led.on()
-    elif command == "LED OFF":
-        led.off()
-    elif command == "MEASURE ON":
-        measure_enabled = True
-    elif command == "MEASURE OFF":
-        measure_enabled = False
-    elif command.startswith("SET PERIOD "):
+def process_command(cmd):
+    global measuring, send_interval
+    print('Cmd received:', cmd)
+    if cmd == 'LED ON': led_pin.on()
+    elif cmd == 'LED OFF': led_pin.off()
+    elif cmd == 'MEASURE ON': measuring = True
+    elif cmd == 'MEASURE OFF': measuring = False
+    elif cmd.startswith('SET PERIOD '):
         try:
-            value = int(command.split(" ")[2])
-            SEND_INTERVAL = max(1, value)
-            print("Nová perioda měření:", SEND_INTERVAL)
+            val = int(cmd.split()[2])
+            send_interval = max(1, val)
+            print('New interval:', send_interval)
         except:
-            print("Neplatná perioda")
+            print('Invalid period')
 
-# ==== MQTT Callback ====
-def on_message(topic, msg):
-    handle_command(msg.decode())
+# MQTT callback
 
-# ==== Hlavní program ====
-def main():
-    global measure_enabled, SEND_INTERVAL
+def mqtt_callback(topic, msg):
+    process_command(msg.decode())
 
-    connect_wifi()
-    sync_time()
+# Main loop
 
-    client = MQTTClient(MQTT_CLIENT_ID, MQTT_BROKER)
-    client.set_callback(on_message)
+def run():
+    global measuring, send_interval
+    init_wifi()
+    synchronize_time()
+
+    client = MQTTClient(CLIENT_ID, BROKER, port=PORT)
+    client.set_callback(mqtt_callback)
     client.connect()
-    client.subscribe(TOPIC_COMMAND)
-    print("MQTT připojeno")
+    client.subscribe(CMD_TOPIC)
+    print('MQTT ready')
 
-    last_sent = time.time()
-
+    last = time.time()
     while True:
-        client.check_msg()  # zpracuj příchozí příkazy
-
+        client.check_msg()
         now = time.time()
-        if now - last_sent >= SEND_INTERVAL:
-            if measure_enabled
-                temp = read_temperature()
-                timestamp = get_local_timestamp()
-
-                payload = {
-                    "temperature": temp,
-                    "timestamp_measurement": timestamp,
-                    "timestamp_sent": timestamp
-                }
-
+        if now - last >= send_interval:
+            if measuring:
+                temp = measure_temp()
+                ts = format_timestamp()
+                payload = {'temperature': temp, 'timestamp_measurement': ts, 'timestamp_sent': ts}
                 try:
-                    client.publish(TOPIC_DATA, json.dumps(payload), qos=1)
-                    print("Odesláno:", payload)
-                    last_sent = now
+                    client.publish(DATA_TOPIC, json.dumps(payload), qos=1)
+                    print('Sent', payload)
+                    last = now
                 except Exception as e:
-                    print("Chyba při odeslání:", e)
-        else:
-            print("Měření pozastaveno – neodesílám data")
-        last_sent = now 
+                    print('Send error:', e)
+            else:
+                print('Measurement paused')
         time.sleep(0.1)
 
-main()
+if __name__ == '__main__':
+    run()

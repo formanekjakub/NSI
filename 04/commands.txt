@@ -3,5 +3,5 @@ mosquitto - příkazy
 brew services list (akutalni stav/status)
 brew services start mosquitto (spusti na pozadi)
 brew services stop mosquitto
-mosquitto -v  (spustí v terminalu)
+mosquitto -c mosquitto.conf  (spustí v terminalu)
 

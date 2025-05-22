@@ -1,0 +1,103 @@
+{% extends 'layout.html' %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="container">
+  <h1>Vítejte v Dashboardu</h1>
+
+  <!-- Control panel -->
+  <form action="{{ url_for('handle_control') }}" method="POST" class="mb-4">
+    <button type="submit" name="action" value="{{ 'LED OFF' if led_enabled else 'LED ON' }}" class="btn btn-outline-primary btn-sm mr-2">
+      {{ 'Vypnout LED' if led_enabled else 'Zapnout LED' }}
+    </button>
+    <button type="submit" name="action" value="{{ 'MEASURE OFF' if measuring else 'MEASURE ON' }}" class="btn btn-outline-primary btn-sm mr-2">
+      {{ 'Zastavit měření' if measuring else 'Spustit měření' }}
+    </button>
+    <div class="input-group input-group-sm d-inline-block" style="width: 150px;">
+      <input type="number" name="period" value="{{ interval_seconds }}" class="form-control" min="1">
+      <div class="input-group-append">
+        <button type="submit" class="btn btn-outline-secondary">Nastavit interval</button>
+      </div>
+    </div>
+  </form>
+
+  <!-- Data table and delete buttons -->
+  <button class="btn btn-outline-danger btn-sm mb-3" onclick="deleteAllData();">Smazat všechny záznamy</button>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Teplota</th>
+        <th>Čas měření</th>
+        <th>Čas odeslání</th>
+        <th>Čas přijetí</th>
+        <th>Smazat</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for entry in measurements %}
+      <tr id="row-{{ entry[0] }}">
+        <td>{{ entry[0] }}</td>
+        <td>{{ entry[1] }}</td>
+        <td>{{ entry[2] }}</td>
+        <td>{{ entry[3] }}</td>
+        <td>{{ entry[4] }}</td>
+        <td>
+          <button class="btn btn-outline-danger btn-sm" onclick="deleteData({{ entry[0] }}); return false;">Smazat</button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- Sorting links -->
+  <div class="mb-4">
+    <a href="{{ url_for('dashboard_view', sort='asc') }}" class="btn btn-outline-secondary btn-sm {% if sort == 'asc' %}active{% endif %}">Od nejstarší</a>
+    <a href="{{ url_for('dashboard_view', sort='desc') }}" class="btn btn-outline-secondary btn-sm {% if sort == 'desc' %}active{% endif %}">Od nejnovější</a>
+  </div>
+
+  <!-- Chart -->
+  <h4>Graf hodnot</h4>
+  <canvas id="temperatureChart" width="400" height="200"></canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const xLabels = {{ labels|tojson }};
+    const yData = {{ temps|tojson }};
+    const ctx = document.getElementById('temperatureChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'line',
+      data: { labels: xLabels, datasets: [{ label: 'Teplota', data: yData, fill: false, borderWidth: 2 }] },
+      options: { responsive: true }
+    });
+  });
+</script>
+<script>
+  function deleteData(id) {
+    fetch(`/api/data/${id}`, { method: 'DELETE' })
+      .then(response => {
+        if (response.ok) {
+          const row = document.getElementById(`row-${id}`);
+          if (row) row.remove();
+        } else {
+          alert('Chyba při mazání položky');
+        }
+      })
+      .catch(() => alert('Síťová chyba'));
+  }
+
+  function deleteAllData() {
+    if (!confirm('Opravdu chcete smazat všechny záznamy?')) return;
+    fetch('/api/clear', { method: 'POST' })
+      .then(response => {
+        if (response.ok) {
+          window.location.reload();
+        } else {
+          alert('Chyba při mazání všech položek');
+        }
+      })
+      .catch(() => alert('Síťová chyba'));
+  }
+</script>
+{% endblock %}
