@@ -2,8 +2,32 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
-<h1>Vítejte v Dashboardu</h1>
-<h4>Naměřené hodnoty</h4>
+<style>
+  .center-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;  /* vertical centering */
+    align-items: center;      /* horizontal centering */
+    height: 20vh;            /* full viewport height */
+    text-align: center;
+  }
+</style>
+
+<div class="center-content">
+  <h1>Chytrý květináče</h1>
+  <h4>šťastná záhrádka</h4>
+</div>
+
+
+<form method="get" action="{{ url_for('dashboard') }}" class="mb-3 d-flex align-items-center" style="max-width: 400px;">
+  <label for="n" class="form-label mb-0 me-2">Počet záznamů:</label>
+  <div class="input-group">
+    <input type="number" name="n" value="{{ n }}" min="1" max="100" class="form-control">
+    <button type="submit" class="btn btn-secondary">Zobrazit</button>
+  </div>
+</form>
+
+
 <br>
 <button class="btn btn-outline-danger btn-sm" onclick="deleteAllData();">Smazat všechny záznamy</button>
 <br>
@@ -49,40 +73,7 @@
 </div>
 {% endfor %}
 
-<div class="mb-3 mt-4">
-  <a href="{{ url_for('dashboard', sort='asc') }}" class="btn btn-outline-secondary btn-sm {% if sort == 'asc' %}active{% endif %}">Od nejstarší</a>
-  <a href="{{ url_for('dashboard', sort='desc') }}" class="btn btn-outline-secondary btn-sm {% if sort == 'desc' %}active{% endif %}">Od nejnovější</a>
-</div>
 
-<!-- Control Panel -->
-<div class="col-md-4 mt-5">
-    <h2>Ovládání měření a LED</h2>
-    <form method="post" action="/control" class="mb-3">
-        <div class="d-grid gap-2">
-            <button type="submit" name="action" value="LED ON" class="btn btn-primary">💡 LED ON</button>
-            <button type="submit" name="action" value="LED OFF" class="btn btn-primary">💡 LED OFF</button>
-            <button type="submit" name="action" value="MEASURE ON" class="btn btn-secondary">Spustit měření</button>
-            <button type="submit" name="action" value="MEASURE OFF" class="btn btn-secondary">Zastavit měření</button>
-        </div>
-    </form>
-
-    <form method="post" action="/control" class="mb-3">
-        <label for="period" class="form-label">Nastavit periodu (s):</label>
-        <div class="input-group">
-            <input type="number" name="period" min="1" max="30" value="{{ current_period }}" class="form-control">
-            <button type="submit" class="btn btn-primary">Nastavit</button>
-        </div>
-    </form>
-
-    <h3>Stav systému</h3>
-    <ul class="list-unstyled">
-        <li>LED: <strong class="{{ 'status-green' if led_state else 'status-red' }}">
-            {{ 'ZAPNUTÁ' if led_state else 'VYPNUTÁ' }}</strong></li>
-        <li>Měření: <strong class="{{ 'status-green' if measure_state else 'status-red' }}">
-            {{ 'AKTIVNÍ' if measure_state else 'NEAKTIVNÍ' }}</strong></li>
-        <li>Perioda měření: <strong>{{ current_period }} s</strong></li>
-    </ul>
-</div>
 
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from flask_login import LoginManager, login_user, logout_user, login_required
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
-from database import get_all_measurements, init_db, clear_measurements, delete_measurement, insert_measurement
+from database import get_all_measurements, init_db, clear_measurements, delete_measurement, insert_measurement, get_last_n_measurements
 from mqtt import start_mqtt, publish_command
 
 
@@ -52,7 +52,8 @@ def index():
 def dashboard():
     # sorting
     sort_order = request.args.get('sort', 'desc').lower()
-    measurements = get_all_measurements(sort_order)
+    n = request.args.get('n', default=20, type=int)
+    measurements = get_last_n_measurements(n, sort=sort_order)
 
     # Prepare chart data
     labels = [row['timestamp_received'] for row in measurements]
@@ -137,39 +138,6 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for('login'))
-
-@app.route("/control", methods=["POST"])
-def control():
-    global is_led_on, is_measuring, measurement_interval
-
-    # Read form inputs
-    command_str = request.form.get("action")
-    new_interval = request.form.get("period")
-
-    # Handle action commands
-    if command_str:
-        publish_command(command_str)
-        if command_str == "LED ON":
-            is_led_on = True
-        elif command_str == "LED OFF":
-            is_led_on = False
-        elif command_str == "MEASURE ON":
-            is_measuring = True
-        elif command_str == "MEASURE OFF":
-            is_measuring = False
-
-    # Handle period adjustment
-    if new_interval:
-        try:
-            interval_val = int(new_interval)
-            # Only send update if it's a positive change
-            if interval_val > 0 and interval_val != measurement_interval:
-                measurement_interval = interval_val
-                publish_command(f"SET INTERVAL {interval_val}")
-        except ValueError:
-            print("Invalid interval value:", new_interval)
-
-    return redirect(url_for("dashboard"))
 
 
 if __name__ == "__main__":

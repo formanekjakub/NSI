@@ -65,3 +65,19 @@ def clear_measurements():
         cursor.execute("DELETE FROM measurements")  # Remove all data
         cursor.execute("DELETE FROM sqlite_sequence WHERE name='measurements'")  # Reset autoincrement
         conn.commit()
+
+def get_last_n_measurements(n, sort='desc'):
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+
+    order_clause = 'DESC' if sort == 'desc' else 'ASC'
+    cur.execute(f'''
+        SELECT * FROM measurements
+        ORDER BY timestamp_received {order_clause}
+        LIMIT ?
+    ''', (n,))
+
+    rows = cur.fetchall()
+    conn.close()
+    return rows
