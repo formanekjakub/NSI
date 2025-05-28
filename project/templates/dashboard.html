@@ -1,0 +1,142 @@
+{% extends 'layout.html' %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<h1>Vítejte v Dashboardu</h1>
+<h4>Naměřené hodnoty</h4>
+<br>
+<button class="btn btn-outline-danger btn-sm" onclick="deleteAllData();">Smazat všechny záznamy</button>
+<br>
+
+{% for label, key in chart_info %}
+<div class="row mt-5">
+  <!-- Table -->
+  <div class="col-md-7">
+    <h5>{{ label }}</h5>
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>{{ label }}</th>
+                <th>Čas odeslání</th>
+                <th>Čas přijetí</th>
+                <th>Smazat</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in measurements %}
+              <tr id="row-{{ row['id'] }}">
+                  <td>{{ row['id'] }}</td>
+                  <td>{{ row[key] }}</td>
+                  <td>{{ row['timestamp_sent'] }}</td>
+                  <td>{{ row['timestamp_received'] }}</td>
+                  <td>
+                      <button
+                        class="btn btn-outline-danger btn-sm"
+                        onclick="deleteData({{ row['id'] }});"
+                      >Smazat</button>
+                    </td>
+              </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+  </div>
+
+  <!-- Chart -->
+  <div class="col-md-5">
+    <canvas id="{{ key }}Chart" width="400" height="200"></canvas>
+  </div>
+</div>
+{% endfor %}
+
+<div class="mb-3 mt-4">
+  <a href="{{ url_for('dashboard', sort='asc') }}" class="btn btn-outline-secondary btn-sm {% if sort == 'asc' %}active{% endif %}">Od nejstarší</a>
+  <a href="{{ url_for('dashboard', sort='desc') }}" class="btn btn-outline-secondary btn-sm {% if sort == 'desc' %}active{% endif %}">Od nejnovější</a>
+</div>
+
+<!-- Control Panel -->
+<div class="col-md-4 mt-5">
+    <h2>Ovládání měření a LED</h2>
+    <form method="post" action="/control" class="mb-3">
+        <div class="d-grid gap-2">
+            <button type="submit" name="action" value="LED ON" class="btn btn-primary">💡 LED ON</button>
+            <button type="submit" name="action" value="LED OFF" class="btn btn-primary">💡 LED OFF</button>
+            <button type="submit" name="action" value="MEASURE ON" class="btn btn-secondary">Spustit měření</button>
+            <button type="submit" name="action" value="MEASURE OFF" class="btn btn-secondary">Zastavit měření</button>
+        </div>
+    </form>
+
+    <form method="post" action="/control" class="mb-3">
+        <label for="period" class="form-label">Nastavit periodu (s):</label>
+        <div class="input-group">
+            <input type="number" name="period" min="1" max="30" value="{{ current_period }}" class="form-control">
+            <button type="submit" class="btn btn-primary">Nastavit</button>
+        </div>
+    </form>
+
+    <h3>Stav systému</h3>
+    <ul class="list-unstyled">
+        <li>LED: <strong class="{{ 'status-green' if led_state else 'status-red' }}">
+            {{ 'ZAPNUTÁ' if led_state else 'VYPNUTÁ' }}</strong></li>
+        <li>Měření: <strong class="{{ 'status-green' if measure_state else 'status-red' }}">
+            {{ 'AKTIVNÍ' if measure_state else 'NEAKTIVNÍ' }}</strong></li>
+        <li>Perioda měření: <strong>{{ current_period }} s</strong></li>
+    </ul>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const timeLabels = {{ labels | tojson }};
+
+  const datasets = {
+    temperature: {
+      label: "Teplota (°C)",
+      data: {{ temps | tojson }},
+    },
+    humidity: {
+      label: "Vlhkost (%)",
+      data: {{ humidities | tojson }},
+    },
+    soil_moisture: {
+      label: "Půdní vlhkost",
+      data: {{ moistures | tojson }},
+    },
+    light: {
+      label: "Světlo",
+      data: {{ lights | tojson }},
+    }
+  };
+
+
+  Object.entries(datasets).forEach(([key, config]) => {
+    const ctx = document.getElementById(`${key}Chart`).getContext('2d');
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: timeLabels,
+        datasets: [{
+          label: config.label,
+          data: config.data,
+          borderColor: 'rgba(75, 192, 192, 1)',
+          borderWidth: 2,
+          fill: false
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          x: { title: { display: true, text: 'Čas přijetí' } },
+          y: {
+            title: { display: true, text: config.label },
+            beginAtZero: true
+          }
+        }
+      }
+    });
+  });
+});
+</script>
+
+{% endblock %}
