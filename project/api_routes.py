@@ -1,6 +1,8 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required
-from database import db, delete_measurement, clear_measurements
+from database import db, delete_measurement, clear_measurements, get_threshold, set_threshold
+from mqtt import publish_command
+import json   
 
 api_bp = Blueprint('api', __name__)
 
@@ -31,3 +33,24 @@ def clear_all():
     print("jou")
     clear_measurements()
     return jsonify({'message': 'Data smazana'}), 200
+
+@api_bp.route('/threshold', methods=['GET'])
+@login_required
+def api_get_threshold():
+    return jsonify({'threshold': get_threshold()})
+
+@api_bp.route('/threshold', methods=['POST'])
+@login_required
+def api_set_threshold():
+    body = request.get_json() or {}
+    if 'threshold' not in body:
+        return jsonify({'error': 'No threshold provided'}), 400
+    try:
+        t = int(body['threshold'])
+    except ValueError:
+        return jsonify({'error': 'Invalid threshold'}), 400
+
+    set_threshold(t)
+    # send to Pi
+    publish_command(json.dumps({'threshold': t}))
+    return jsonify({'message': 'Threshold updated', 'threshold': t})

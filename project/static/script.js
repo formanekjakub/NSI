@@ -52,3 +52,42 @@ async function deleteAllData(id) {
         alert('Neznámá chyba při mazání.');
     }
 }
+
+// static/script.js
+document.addEventListener('DOMContentLoaded', () => {
+  const thresholdInput = document.getElementById('threshold');
+  const setBtn         = document.getElementById('setThresholdBtn');
+  const statusMsg      = document.getElementById('thresholdStatus');
+
+  setBtn.addEventListener('click', async () => {
+    const val = parseInt(thresholdInput.value, 10);
+    if (isNaN(val)) {
+      statusMsg.textContent = 'Zadejte platné číslo.';
+      statusMsg.classList.add('error');
+      return;
+    }
+
+    try {
+      // ← point at the correct URL
+      const res = await fetch('/api/threshold', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ threshold: val })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        statusMsg.textContent = `Práh nastaven: ${data.threshold}`;
+        statusMsg.classList.remove('error');
+        statusMsg.classList.add('success');
+      } else {
+        statusMsg.textContent = `Chyba: ${data.error || 'něco se pokazilo'}`;
+        statusMsg.classList.add('error');
+      }
+    } catch (err) {
+      statusMsg.textContent = 'Server nedostupný.';
+      statusMsg.classList.add('error');
+    }
+  });
+});
+

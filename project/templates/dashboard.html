@@ -18,64 +18,133 @@
   <h4>šťastná záhrádka</h4>
 </div>
 
-
-<form method="get" action="{{ url_for('dashboard') }}" class="mb-3 d-flex align-items-center" style="max-width: 400px;">
-  <label for="n" class="form-label mb-0 me-2">Počet záznamů:</label>
-  <div class="input-group">
-    <input type="number" name="n" value="{{ n }}" min="1" max="100" class="form-control">
-    <button type="submit" class="btn btn-secondary">Zobrazit</button>
+{# dashboard.html #}
+<form method="get" action="{{ url_for('dashboard') }}" style="max-width: 600px;">
+  <!-- Pot selector -->
+  <div class="mb-3">
+    <label for="pot_id" class="form-label">Vyber květináč:</label>
+    <select name="pot_id" id="pot_id" class="form-select">
+      <option value="" {% if selected_pot_id is none %}selected{% endif %}>
+        -- Vyberte květináč --
+      </option>
+      {% for pot in pots %}
+        <option value="{{ pot.id }}"
+          {% if pot.id == selected_pot_id %}selected{% endif %}>
+          {{ pot.name or pot.client_id }}
+        </option>
+      {% endfor %}
+    </select>
   </div>
+
+  <!-- Number of records, moved below -->
+  <div class="mb-3">
+    <label for="n" class="form-label">Počet záznamů:</label>
+    <input type="number"
+           name="n"
+           id="n"
+           value="{{ n }}"
+           min="1"
+           max="100"
+           class="form-control"
+    >
+  </div>
+
+  <div class="threshold-container">
+    <label for="threshold">Půdní vlhkost – práh:</label>
+    <input
+      type="number"
+      id="threshold"
+      value="{{ threshold }}"
+      min="0"
+    />
+    <button id="setThresholdBtn">Nastavit práh</button>
+    <div id="thresholdStatus"></div>
+  </div>
+
+
+  <script>
+    document
+      .getElementById('setThresholdBtn')
+      .addEventListener('click', async () => {
+        const val = parseInt(document.getElementById('threshold').value, 10);
+        const res = await fetch('/threshold', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ threshold: val })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alert('Práh nastaven: ' + data.threshold);
+        } else {
+          alert('Chyba: ' + data.error);
+        }
+      });
+  </script>
+
+  
+
+  <button type="submit" class="btn btn-secondary">Zobrazit</button>
 </form>
 
+{% if selected_pot_id is none %}
+  <div class="alert alert-info mt-3">
+    Vyberte prosím květináč, aby se zobrazila data.
+  </div>
 
-<br>
-<button class="btn btn-outline-danger btn-sm" onclick="deleteAllData();">Smazat všechny záznamy</button>
-<br>
 
-{% for label, key in chart_info %}
-<div class="row mt-5">
-  <!-- Table -->
-  <div class="col-md-7">
-    <h5>{{ label }}</h5>
-    <table class="table table-bordered table-striped">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>{{ label }}</th>
-                <th>Čas odeslání</th>
-                <th>Čas přijetí</th>
-                <th>Smazat</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for row in measurements %}
-              <tr id="row-{{ row['id'] }}">
-                  <td>{{ row['id'] }}</td>
-                  <td>{{ row[key] }}</td>
-                  <td>{{ row['timestamp_sent'] }}</td>
-                  <td>{{ row['timestamp_received'] }}</td>
-                  <td>
-                      <button
-                        class="btn btn-outline-danger btn-sm"
-                        onclick="deleteData({{ row['id'] }});"
-                      >Smazat</button>
-                    </td>
+{% else %}
+  <br>
+  <button class="btn btn-outline-danger btn-sm" onclick="deleteAllData();">Smazat všechny záznamy</button>
+  <br>
+
+  {% for label, key in chart_info %}
+  <div class="row mt-5">
+    <!-- Table -->
+    <div class="col-md-7">
+      <h5>{{ label }}</h5>
+      <table class="table table-bordered table-striped">
+          <thead>
+              <tr>
+                  <th>ID</th>
+                  <th>{{ label }}</th>
+                  <th>Čas odeslání</th>
+                  <th>Čas přijetí</th>
+                  <th>Smazat</th>
               </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-  </div>
+          </thead>
+          <tbody>
+              {% for row in measurements %}
+                <tr id="row-{{ row['id'] }}">
+                    <td>{{ row['id'] }}</td>
+                    <td>{{ row[key] }}</td>
+                    <td>{{ row['timestamp_sent'] }}</td>
+                    <td>{{ row['timestamp_received'] }}</td>
+                    <td>
+                        <button
+                          class="btn btn-outline-danger btn-sm"
+                          onclick="deleteData({{ row['id'] }});"
+                        >Smazat</button>
+                      </td>
+                </tr>
+              {% endfor %}
+          </tbody>
+      </table>
+    </div>
 
-  <!-- Chart -->
-  <div class="col-md-5">
-    <canvas id="{{ key }}Chart" width="400" height="200"></canvas>
+    <!-- Chart -->
+    <div class="col-md-5">
+      <canvas id="{{ key }}Chart" width="400" height="200"></canvas>
+    </div>
   </div>
-</div>
-{% endfor %}
+  {% endfor %}
+{% endif %}
 
 
 
 <!-- Chart.js -->
+  <!-- At bottom of body -->
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {

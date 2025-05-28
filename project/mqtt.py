@@ -3,14 +3,19 @@ import paho.mqtt.client as mqtt
 from database import insert_measurement
 
 # ==== MQTT configuration ====
+MQTT_CLIENT_ID = 'dashboard_publisher'
 MQTT_BROKER = "172.20.10.2"           # IP address of the MQTT broker
 MQTT_DATA_TOPIC = "smartpot/sensors"
+MQTT_CMD_TOPIC = "smartpot/cmd"  
 
 MQTT_PORT = 1883
 MQTT_KEEPALIVE = 60
 
-# ==== MQTT client instance ====
-mqtt_client = mqtt.Client(client_id="db_writer")
+# Create & connect your publisher client
+mqtt_client = mqtt.Client(client_id=MQTT_CLIENT_ID)
+mqtt_client.connect(MQTT_BROKER, MQTT_PORT)
+# Start the network loop in its own thread so publishes actually go out:
+mqtt_client.loop_start()
 
 def handle_connect(client, userdata, flags, return_code):
     """Called when the MQTT client connects to the broker."""
@@ -21,28 +26,21 @@ def handle_message(client, userdata, message):
     """Called when a new MQTT message arrives from Raspberry Pi Pico."""
     try:
         data = json.loads(message.payload.decode())
-
-        temperature = data.get("temperature")
-        humidity = data.get("humidity")
+        client_id     = data.get("client_id", "unknown")
+        temperature   = data.get("temperature")
+        humidity      = data.get("humidity")
         soil_moisture = data.get("soil_moisture")
-        light_level = data.get("light")
-        sent_time = data.get("sent_time")
+        light_level   = data.get("light")
+        sent_time     = data.get("sent_time")
 
-        print(f"Received Data:")
-        print(f"  Temperature: {temperature}°C")
-        print(f"  Humidity: {humidity}%")
-        print(f"  Soil Moisture: {soil_moisture}")
-        print(f"  Light Level: {light_level}")
-        print(f"  Sent Time (Unix): {sent_time}")
-
-        # Replace this with your actual DB or storage handler
         insert_measurement(
+            client_id=client_id,           # ← now required
             temperature=temperature,
             humidity=humidity,
             soil_moisture=soil_moisture,
             light_level=light_level,
             sent_time=sent_time
-        )
+    )
 
     except Exception as err:
         print("Error processing incoming message:", err)
@@ -58,6 +56,8 @@ def start_mqtt():
     mqtt_client.loop_start()
 
 def publish_command(command_str):
-    """Send a control command over MQTT."""
-    print(f"Publishing command: {command_str}")
-    mqtt_client.publish(MQTT_CMD_TOPIC, command_str, qos=1)
+    # If you passed in a dict/json-able, make it a string:
+    payload = command_str if isinstance(command_str, str) else json.dumps(command_str)
+    print(f"Publishing command to {MQTT_CMD_TOPIC}: {payload}")
+    mqtt_client.publish(MQTT_CMD_TOPIC, payload, qos=1)
+

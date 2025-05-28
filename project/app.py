@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from flask_login import LoginManager, login_user, logout_user, login_required
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
-from database import get_all_measurements, init_db, clear_measurements, delete_measurement, insert_measurement, get_last_n_measurements
+from database import init_db, clear_measurements, delete_measurement, insert_measurement, get_last_n_measurements, get_all_pots, get_threshold
 from mqtt import start_mqtt, publish_command
 
 
@@ -50,43 +50,53 @@ def index():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    # sorting
-    sort_order = request.args.get('sort', 'desc').lower()
-    n = request.args.get('n', default=20, type=int)
-    measurements = get_last_n_measurements(n, sort=sort_order)
+    sort_order   = request.args.get('sort', 'desc').lower()
+    n            = request.args.get('n', default=20, type=int)
 
-    # Prepare chart data
-    labels = [row['timestamp_received'] for row in measurements]
-    temps = [row['temperature'] for row in measurements]
-    humidities = [row['humidity'] for row in measurements]
-    moistures = [row['soil_moisture'] for row in measurements]
-    lights = [row['light'] for row in measurements]
+    # 1) Read raw pot_id
+    pot_id_raw = request.args.get('pot_id', '')
+    try:
+        selected = int(pot_id_raw)
+    except (ValueError, TypeError):
+        selected = None
 
-    # Dummy values for now — replace these with your actual logic or state
-    period = 10
-    led_on = True
-    measuring = True
+    # 2) Load all pots for the dropdown
+    pots = get_all_pots()
+    threshold = get_threshold()
+    
+
+    # 3) Only fetch data if we have a valid integer pot_id
+    if selected is not None:
+        measurements = get_last_n_measurements(n, sort=sort_order, pot_id=selected)
+    else:
+        measurements = []
+
+    # 4) Prepare your chart series
+    labels     = [r['timestamp_received'] for r in measurements]
+    temps      = [r['temperature']        for r in measurements]
+    humidities = [r['humidity']           for r in measurements]
+    moistures  = [r['soil_moisture']      for r in measurements]
+    lights     = [r['light']              for r in measurements]
 
     chart_info = [
-    ('Teplota [°C]', 'temperature'),
-    ('Vlhkost [%]', 'humidity'),
-    ('Půdní vlhkost', 'soil_moisture'),
-    ('Světlo', 'light')
+      ('Teplota [°C]', 'temperature'),
+      ('Vlhkost [%]',  'humidity'),
+      ('Půdní vlhkost','soil_moisture'),
+      ('Světlo',       'light')
     ]
 
     return render_template(
-        'dashboard.html',
-        measurements=measurements,
-        labels=labels,
-        temps=temps,
-        humidities=humidities,
-        moistures=moistures,
-        lights=lights,
-        chart_info=chart_info,
-        current_period=period,
-        led_state=led_on,
-        measure_state=measuring,
-        sort=sort_order
+      'dashboard.html',
+      pots=pots,
+      selected_pot_id=selected,
+      n=n,
+      sort=sort_order,
+      measurements=measurements,
+      labels=labels, temps=temps,
+      humidities=humidities,
+      moistures=moistures, lights=lights,
+      chart_info=chart_info,
+      threshold=threshold
     )
 
 
