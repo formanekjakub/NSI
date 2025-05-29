@@ -14,7 +14,7 @@
 </style>
 
 <div class="center-content">
-  <h1>Chytrý květináče</h1>
+  <h1>Chytré květináče</h1>
   <h4>šťastná záhrádka</h4>
 </div>
 
@@ -37,29 +37,51 @@
   </div>
 
   <!-- Number of records, moved below -->
-  <div class="mb-3">
-    <label for="n" class="form-label">Počet záznamů:</label>
-    <input type="number"
-           name="n"
-           id="n"
-           value="{{ n }}"
-           min="1"
-           max="100"
-           class="form-control"
-    >
+  <!-- wrap both controls in a Bootstrap row -->
+  <div class="row mb-3 align-items-end">
+
+  <!-- Počet záznamů + Zobrazit -->
+    <div class="col-sm-6 col-md-4">
+      <label for="n" class="form-label">Počet záznamů:</label>
+      <div class="input-group">
+        <input
+          type="number"
+          name="n"
+          id="n"
+          value="{{ n }}"
+          min="1"
+          max="100"
+          class="form-control"
+        >
+        <button type="submit" class="btn btn-secondary">Zobrazit</button>
+      </div>
+    </div>
+
+    <!-- Půdní vlhkost – práh -->
+    <div class="col-sm-6 col-md-4 offset-md-4">
+      <label for="threshold" class="form-label">Půdní vlhkost – práh:</label>
+      <div class="d-flex flex-nowrap align-items-center">
+        <input
+          type="number"
+          id="threshold"
+          value="{{ threshold }}"
+          min="0"
+          class="form-control"
+        >
+        <!-- ms-3 adds ~1rem of space (approx. 1cm at default font size) -->
+        <button
+          id="setThresholdBtn"
+          class="btn btn-secondary ms-3 flex-shrink-0"
+          type="button"
+        >Nastavit</button>
+      </div>
+      <div id="thresholdStatus" class="form-text mt-1"></div>
+    </div>
+
   </div>
 
-  <div class="threshold-container">
-    <label for="threshold">Půdní vlhkost – práh:</label>
-    <input
-      type="number"
-      id="threshold"
-      value="{{ threshold }}"
-      min="0"
-    />
-    <button id="setThresholdBtn">Nastavit práh</button>
-    <div id="thresholdStatus"></div>
-  </div>
+
+
 
 
   <script>
@@ -81,9 +103,6 @@
       });
   </script>
 
-  
-
-  <button type="submit" class="btn btn-secondary">Zobrazit</button>
 </form>
 
 {% if selected_pot_id is none %}

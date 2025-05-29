@@ -25,7 +25,7 @@ def init_db():
                 name TEXT
             )
         ''')
-        # Measurements table now has pot_id FK
+        # Measurements table 
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS measurements (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
